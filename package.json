@@ -1,0 +1,23 @@
+{
+  "name": "gpts-dcinside-viewer",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/index.mjs",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "GurumNyang",
+  "license": "ISC",
+  "description": "DC Inside Viewer API for GPTs",
+  "devDependencies": {
+    "wrangler": "^4.22.0"
+  },
+  "dependencies": {
+    "@cloudflare/workers-types": "^4.0.0",
+    "@gurumnyang/dcinside.js": "^1.3.3",
+    "axios": "^1.8.4",
+    "cheerio": "^1.0.0-rc.12"
+  }
+}

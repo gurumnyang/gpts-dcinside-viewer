@@ -1,0 +1,14 @@
+name = "gpts-dcinside-viewer"
+main = "src/index.mjs"
+compatibility_date = "2025-07-01"
+compatibility_flags = ["nodejs_compat"]
+
+[env.production]
+name = "gpts-dcinside-viewer"
+
+[env.staging]
+name = "gpts-dcinside-viewer-staging"
+
+# CORS 설정을 위한 환경 변수
+[vars]
+ALLOWED_ORIGINS = "*"
