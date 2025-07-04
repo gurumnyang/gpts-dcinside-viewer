@@ -1,4 +1,8 @@
 import * as dcinside from '@gurumnyang/dcinside.js';
+import { withTimeout } from './utils.js';
+
+// CPU 시간 제한을 고려한 타임아웃 설정 (15초)
+const REQUEST_TIMEOUT = 15000;
 
 /**
  * 갤러리의 게시글 목록을 가져오는 함수
@@ -10,11 +14,15 @@ import * as dcinside from '@gurumnyang/dcinside.js';
  */
 async function getPostList({ galleryId, page = 1, boardType = 'all' }) {
   try {
-    const postList = await dcinside.getPostList({
-      galleryId,
-      page,
-      boardType
-    });
+    const postList = await withTimeout(
+      dcinside.getPostList({
+        galleryId,
+        page,
+        boardType
+      }),
+      REQUEST_TIMEOUT,
+      'Post list retrieval'
+    );
     
     return postList;
   } catch (error) {
@@ -28,17 +36,21 @@ async function getPostList({ galleryId, page = 1, boardType = 'all' }) {
  * @param {Object} options - 옵션 객체
  * @param {string} options.galleryId - 갤러리 ID
  * @param {string|number} options.postNo - 게시글 번호
- * @param {boolean} options.extractImages - 이미지 URL 추출 여부 (기본값: true)
+ * @param {boolean} options.extractImages - 이미지 URL 추출 여부 (기본값: false)
  * @returns {Promise<Object|null>} - 게시글 객체 또는 실패 시 null
  */
-async function getPost({ galleryId, postNo, extractImages = true }) {
+async function getPost({ galleryId, postNo, extractImages = false }) {
   try {
-    const post = await dcinside.getPost({
-      galleryId,
-      postNo,
-      extractImages,
-      includeImageSource: false
-    });
+    const post = await withTimeout(
+      dcinside.getPost({
+        galleryId,
+        postNo,
+        extractImages,
+        includeImageSource: false
+      }),
+      REQUEST_TIMEOUT,
+      'Post retrieval'
+    );
     
     return post;
   } catch (error) {
@@ -52,22 +64,29 @@ async function getPost({ galleryId, postNo, extractImages = true }) {
  * @param {Object} options - 옵션 객체
  * @param {string} options.galleryId - 갤러리 ID
  * @param {Array<string|number>} options.postNumbers - 게시글 번호 배열
- * @param {number} options.delayMs - 요청 간 지연 시간(ms) (기본값: 200)
- * @param {boolean} options.extractImages - 이미지 URL 추출 여부 (기본값: true)
+ * @param {number} options.delayMs - 요청 간 지연 시간(ms) (기본값: 50)
+ * @param {boolean} options.extractImages - 이미지 URL 추출 여부 (기본값: false)
  * @returns {Promise<Array>} - 게시글 객체 배열
  */
-async function getPosts({ galleryId, postNumbers, delayMs = 200, extractImages = true }) {
+async function getPosts({ galleryId, postNumbers, delayMs = 50, extractImages = false }) {
   try {
-    const posts = await dcinside.getPosts({
-      galleryId,
-      postNumbers,
-      delayMs,
-      extractImages,
-      includeImageSource: false,
-      onProgress: (current, total) => {
-        console.log(`게시글 수집 진행 상황: ${current}/${total}`);
-      }
-    });
+    // 배치 크기 제한으로 CPU 시간 초과 방지
+    const maxBatchSize = 5;
+    const limitedPostNumbers = postNumbers.slice(0, maxBatchSize);
+    
+    const posts = await withTimeout(
+      dcinside.getPosts({
+        galleryId,
+        postNumbers: limitedPostNumbers,
+        delayMs,
+        extractImages,
+        includeImageSource: false,
+        retryAttempts: 1, // 재시도 횟수 제한
+        retryDelay: 100   // 재시도 지연 시간 단축
+      }),
+      REQUEST_TIMEOUT,
+      'Batch posts retrieval'
+    );
     
     return posts;
   } catch (error) {
@@ -85,11 +104,15 @@ async function getPosts({ galleryId, postNumbers, delayMs = 200, extractImages =
  */
 async function getHotPosts({ galleryId, page = 1 }) {
   try {
-    const postList = await dcinside.getPostList({
-      galleryId,
-      page,
-      boardType: 'recommend'
-    });
+    const postList = await withTimeout(
+      dcinside.getPostList({
+        galleryId,
+        page,
+        boardType: 'recommend'
+      }),
+      REQUEST_TIMEOUT,
+      'Hot posts retrieval'
+    );
     
     return postList;
   } catch (error) {
@@ -107,11 +130,15 @@ async function getHotPosts({ galleryId, page = 1 }) {
  */
 async function getNotices({ galleryId, page = 1 }) {
   try {
-    const postList = await dcinside.getPostList({
-      galleryId,
-      page,
-      boardType: 'notice'
-    });
+    const postList = await withTimeout(
+      dcinside.getPostList({
+        galleryId,
+        page,
+        boardType: 'notice'
+      }),
+      REQUEST_TIMEOUT,
+      'Notices retrieval'
+    );
     
     return postList;
   } catch (error) {

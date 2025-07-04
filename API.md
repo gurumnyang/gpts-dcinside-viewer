@@ -188,7 +188,7 @@ GET /api/gallery/{galleryId}/post/{postNo}
 |---------------|-------|---------|-----------|-------------------------------|--------|
 | galleryId     | path  | string  | 필수      | 디시인사이드 갤러리 ID         | -      |
 | postNo        | path  | string  | 필수      | 게시글 번호                    | -      |
-| extractImages | query | boolean | 선택      | 이미지 URL 추출 여부           | true   |
+| extractImages | query | boolean | 선택      | 이미지 URL 추출 여부           | false  |
 
 #### 응답
 
@@ -243,8 +243,10 @@ GET /api/gallery/{galleryId}/posts/batch
 |---------------|-------|---------|-----------|-------------------------------------------|--------|
 | galleryId     | path  | string  | 필수      | 디시인사이드 갤러리 ID                      | -      |
 | ids           | query | string  | 필수      | 조회할 게시글 번호 (쉼표로 구분)            | -      |
-| delayMs       | query | number  | 선택      | 요청 간 지연 시간(ms)                       | 200    |
-| extractImages | query | boolean | 선택      | 이미지 URL 추출 여부                        | true   |
+| delayMs       | query | number  | 선택      | 요청 간 지연 시간(ms)                       | 50     |
+| extractImages | query | boolean | 선택      | 이미지 URL 추출 여부                        | false  |
+
+**참고**: 성능 최적화를 위해 한 번에 최대 5개의 게시글만 처리됩니다.
 
 #### 응답
 
@@ -296,11 +298,14 @@ curl "https://your-worker.workers.dev/api/gallery/programming/posts?page=1"
 # 갤러리 인기글 목록 조회
 curl "https://your-worker.workers.dev/api/gallery/programming/hot"
 
-# 특정 게시글 조회 (이미지 URL 추출 비활성화)
-curl "https://your-worker.workers.dev/api/gallery/programming/post/12345678?extractImages=false"
+# 특정 게시글 조회 (이미지 URL 추출 활성화)
+curl "https://your-worker.workers.dev/api/gallery/programming/post/12345678?extractImages=true"
 
-# 여러 게시글 일괄 조회
+# 여러 게시글 일괄 조회 (최적화된 설정)
 curl "https://your-worker.workers.dev/api/gallery/programming/posts/batch?ids=12345678,12345679,12345680"
+
+# 여러 게시글 일괄 조회 (이미지 추출 활성화, 지연 시간 조정)
+curl "https://your-worker.workers.dev/api/gallery/programming/posts/batch?ids=12345678,12345679&delayMs=100&extractImages=true"
 ```
 
 ## 제한 사항 및 주의사항
@@ -310,6 +315,28 @@ curl "https://your-worker.workers.dev/api/gallery/programming/posts/batch?ids=12
 3. 이 API는 디시인사이드의 공식 API가 아니며, 크롤링을 통해 데이터를 수집합니다.
 4. 수집한 데이터는 개인 연구, 분석 등의 비상업적 용도로만 사용해주세요.
 5. 디시인사이드의 이용약관을 준수해주세요.
+
+## 성능 최적화 사항
+
+이 API는 Cloudflare Workers의 CPU 시간 제한(20ms)을 고려하여 다음과 같이 최적화되었습니다:
+
+### 1. 배치 처리 제한
+- 일괄 조회 시 최대 5개 게시글만 처리하여 CPU 시간 초과 방지
+- 더 많은 게시글이 필요한 경우 여러 번의 요청으로 분할하여 처리
+
+### 2. 기본 설정 최적화
+- `extractImages`: 기본값 `false` (이미지 추출은 CPU 집약적)
+- `delayMs`: 기본값 `50ms` (기존 200ms에서 단축)
+- 재시도 횟수 제한 (`retryAttempts: 1`)
+
+### 3. 타임아웃 보호
+- 모든 요청에 15초 타임아웃 적용
+- 장시간 실행되는 요청 자동 중단
+
+### 4. 성능 권장사항
+- 이미지가 필요한 경우에만 `extractImages=true` 사용
+- 배치 요청 시 적절한 `delayMs` 설정 (50-200ms 권장)
+- 대량 데이터 처리 시 요청을 작은 단위로 분할
 
 ## 오류 코드 및 처리
 
@@ -321,6 +348,17 @@ curl "https://your-worker.workers.dev/api/gallery/programming/posts/batch?ids=12
 | 404 | Endpoint not found | 엔드포인트를 찾을 수 없음 |
 | 405 | Method Not Allowed | 허용되지 않은 HTTP 메서드 |
 | 500 | Internal server error: [에러 메시지] | 서버 내부 오류 |
+| 1102 | CPU time limit exceeded | Cloudflare Workers CPU 시간 제한 초과 |
+
+### 1102 에러 해결 방법
+
+1102 에러는 Cloudflare Workers의 CPU 시간 제한(20ms)을 초과했을 때 발생합니다:
+
+**해결 방법:**
+- 배치 요청 시 게시글 수를 5개 이하로 제한
+- `extractImages=false` 사용 (기본값)
+- `delayMs`를 50ms 이상으로 설정
+- 대량 데이터 처리 시 여러 번의 작은 요청으로 분할
 
 ## 구현 예정 기능
 
