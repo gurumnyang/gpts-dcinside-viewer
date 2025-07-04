@@ -149,7 +149,7 @@ async function handleRequest(request, env, ctx) {
       const galleryId = pathParts[3];
       const postNo = pathParts[5];
       const params = parseUrlParams(request.url);
-      const extractImages = params.extractImages !== 'false';
+      const extractImages = params.extractImages === 'true'; // 기본값 false로 변경
       
       const post = await dcinsideService.getPost({ galleryId, postNo, extractImages });
       response = post ? successResponse(post) : errorResponse('Post not found', 404);
@@ -163,8 +163,8 @@ async function handleRequest(request, env, ctx) {
         response = errorResponse('Missing required parameter: ids (comma-separated post numbers)', 400);
       } else {
         const postNumbers = params.ids.split(',');
-        const delayMs = parseInt(params.delayMs) || 200;
-        const extractImages = params.extractImages !== 'false';
+        const delayMs = parseInt(params.delayMs) || 50; // 기본값 50ms로 변경
+        const extractImages = params.extractImages === 'true'; // 기본값 false로 변경
         
         const posts = await dcinsideService.getPosts({ galleryId, postNumbers, delayMs, extractImages });
         response = successResponse(posts);
