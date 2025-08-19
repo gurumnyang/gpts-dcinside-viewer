@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.0.0",
-    "@gurumnyang/dcinside.js": "^1.3.3",
+    "@gurumnyang/dcinside.js": "^1.5.2",
     "axios": "^1.8.4",
     "cheerio": "^1.0.0-rc.12"
   }
